@@ -187,15 +187,15 @@ function BoardShell({
         )}
 
         <div className="min-w-0 flex-1">
-          <ResizablePanelGroup direction="vertical">
-            <ResizablePanel defaultSize={65} minSize={25}>
+          <ResizablePanelGroup orientation="vertical" className="flex-col">
+            <ResizablePanel defaultSize="65%" minSize="25%">
               <Canvas />
             </ResizablePanel>
             <ResizableHandle
               withHandle
-              className="!bg-border transition-colors hover:!bg-primary/60"
+              className="!h-1.5 !w-full !bg-border transition-colors hover:!bg-primary/60"
             />
-            <ResizablePanel defaultSize={35} minSize={12} className="border-t border-border">
+            <ResizablePanel defaultSize="35%" minSize="12%" className="border-t border-border">
               <ScopePanel />
             </ResizablePanel>
           </ResizablePanelGroup>
