@@ -121,6 +121,15 @@ function BoardShell() {
     [setEdges],
   );
 
+  const onNodeContextMenu = useCallback<NodeMouseHandler>(
+    (event, node) => {
+      event.preventDefault();
+      setNodes((nds) => nds.filter((n) => n.id !== node.id));
+      setEdges((eds) => eds.filter((e) => e.source !== node.id && e.target !== node.id));
+    },
+    [setNodes, setEdges],
+  );
+
   const addComponent = useCallback(
     (kind: ComponentKind) => {
       const spec = COMPONENT_SPECS.find((s) => s.kind === kind);
@@ -201,6 +210,7 @@ function BoardShell() {
                 onNodesChange={onNodesChange}
                 onEdgesChange={onEdgesChange}
                 onConnect={onConnect}
+                onNodeContextMenu={onNodeContextMenu}
               />
             </ResizablePanel>
             <ResizableHandle
