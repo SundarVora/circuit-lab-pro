@@ -67,12 +67,14 @@ function Canvas({
   onNodesChange,
   onEdgesChange,
   onConnect,
+  onNodeContextMenu,
 }: {
   nodes: Node[];
   edges: Edge[];
   onNodesChange: OnNodesChange;
   onEdgesChange: OnEdgesChange;
   onConnect: OnConnect;
+  onNodeContextMenu: NodeMouseHandler;
 }) {
   return (
     <div className="relative h-full w-full">
@@ -83,6 +85,7 @@ function Canvas({
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
+        onNodeContextMenu={onNodeContextMenu}
         nodesDraggable
         nodesConnectable
         elementsSelectable
