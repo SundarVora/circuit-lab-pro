@@ -7,7 +7,7 @@ export function Palette({ onAdd }: { onAdd: (kind: ComponentKind) => void }) {
         <div className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
           Parts bin
         </div>
-        <p className="mt-1 text-xs text-muted-foreground">Drag onto the board</p>
+        <p className="mt-1 text-xs text-muted-foreground">Click to place on the board</p>
       </div>
 
       <div className="flex flex-col gap-2 p-3">
@@ -15,13 +15,8 @@ export function Palette({ onAdd }: { onAdd: (kind: ComponentKind) => void }) {
           <button
             key={spec.kind}
             type="button"
-            draggable
-            onDragStart={(event) => {
-              event.dataTransfer.setData("application/circuit-part", spec.kind);
-              event.dataTransfer.effectAllowed = "move";
-            }}
-            onDoubleClick={() => onAdd(spec.kind)}
-            className="flex cursor-grab items-center gap-3 rounded-md border border-border bg-surface/60 px-3 py-2.5 text-left transition-all hover:border-primary/60 hover:bg-surface active:cursor-grabbing"
+            onClick={() => onAdd(spec.kind)}
+            className="flex items-center gap-3 rounded-md border border-border bg-surface/60 px-3 py-2.5 text-left transition-all hover:border-primary/60 hover:bg-surface active:scale-[0.98]"
           >
             <Symbol kind={spec.kind} className="h-6 w-12 shrink-0 text-primary" />
             <div className="min-w-0">
@@ -36,7 +31,7 @@ export function Palette({ onAdd }: { onAdd: (kind: ComponentKind) => void }) {
 
       <div className="mt-auto border-t border-border p-3">
         <p className="font-mono text-[11px] leading-relaxed text-muted-foreground">
-          Tip: drag a part in, then pull from a terminal dot to wire it up.
+          Tip: click a part to drop it in the middle of the board, then drag it where you want.
         </p>
       </div>
     </aside>

@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import {
   Background,
   BackgroundVariant,
@@ -12,6 +12,9 @@ import {
   type Connection,
   type Edge,
   type Node,
+  type OnConnect,
+  type OnEdgesChange,
+  type OnNodesChange,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
@@ -19,11 +22,7 @@ import { CircuitNode } from "./CircuitNode";
 import { Palette } from "./Palette";
 import { ScopePanel } from "./ScopePanel";
 import { COMPONENT_SPECS, type ComponentKind } from "./symbols";
-import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-} from "@/components/ui/resizable";
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 
 const nodeTypes = { circuit: CircuitNode };
 
@@ -61,55 +60,21 @@ const initialEdges: Edge[] = [
   { id: "e4", source: "n3", target: "n4" },
 ];
 
-let seq = 100;
-
-function Canvas() {
-  const wrapper = useRef<HTMLDivElement>(null);
-  const { screenToFlowPosition } = useReactFlow();
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
-  const [dragOver, setDragOver] = useState(false);
-
-  const onConnect = useCallback(
-    (params: Connection) => setEdges((eds) => addEdge({ ...params, animated: true }, eds)),
-    [setEdges],
-  );
-
-  const spawn = useCallback(
-    (kind: ComponentKind, position: { x: number; y: number }) => {
-      const spec = COMPONENT_SPECS.find((s) => s.kind === kind);
-      if (!spec) return;
-      seq += 1;
-      setNodes((nds) =>
-        nds.concat({
-          id: `n${seq}`,
-          type: "circuit",
-          position,
-          data: { kind, label: spec.label, value: spec.value },
-        }),
-      );
-    },
-    [setNodes],
-  );
-
+function Canvas({
+  nodes,
+  edges,
+  onNodesChange,
+  onEdgesChange,
+  onConnect,
+}: {
+  nodes: Node[];
+  edges: Edge[];
+  onNodesChange: OnNodesChange;
+  onEdgesChange: OnEdgesChange;
+  onConnect: OnConnect;
+}) {
   return (
-    <div
-      ref={wrapper}
-      className="relative h-full w-full"
-      onDragOver={(e) => {
-        e.preventDefault();
-        e.dataTransfer.dropEffect = "move";
-        setDragOver(true);
-      }}
-      onDragLeave={() => setDragOver(false)}
-      onDrop={(e) => {
-        e.preventDefault();
-        setDragOver(false);
-        const kind = e.dataTransfer.getData("application/circuit-part") as ComponentKind;
-        if (!kind) return;
-        spawn(kind, screenToFlowPosition({ x: e.clientX, y: e.clientY }));
-      }}
-    >
+    <div className="relative h-full w-full">
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -117,6 +82,9 @@ function Canvas() {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
+        nodesDraggable
+        nodesConnectable
+        elementsSelectable
         fitView
         proOptions={{ hideAttribution: true }}
         className="bg-background dot-grid"
@@ -124,31 +92,65 @@ function Canvas() {
         <Background variant={BackgroundVariant.Dots} gap={22} size={0} color="transparent" />
         <Controls className="!border-border !bg-panel [&_button]:!border-border [&_button]:!bg-panel [&_button]:!fill-foreground hover:[&_button]:!bg-surface" />
       </ReactFlow>
-
-      {dragOver && (
-        <div className="pointer-events-none absolute inset-3 rounded-lg border-2 border-dashed border-primary/60" />
-      )}
     </div>
   );
 }
 
 export function Board() {
-  const [paletteOpen, setPaletteOpen] = useState(true);
-
   return (
     <ReactFlowProvider>
-      <BoardShell paletteOpen={paletteOpen} setPaletteOpen={setPaletteOpen} />
+      <BoardShell />
     </ReactFlowProvider>
   );
 }
 
-function BoardShell({
-  paletteOpen,
-  setPaletteOpen,
-}: {
-  paletteOpen: boolean;
-  setPaletteOpen: (v: boolean) => void;
-}) {
+let seq = 100;
+
+function BoardShell() {
+  const [paletteOpen, setPaletteOpen] = useState(true);
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  const { screenToFlowPosition } = useReactFlow();
+
+  const onConnect = useCallback(
+    (params: Connection) => setEdges((eds) => addEdge({ ...params, animated: true }, eds)),
+    [setEdges],
+  );
+
+  const addComponent = useCallback(
+    (kind: ComponentKind) => {
+      const spec = COMPONENT_SPECS.find((s) => s.kind === kind);
+      if (!spec) return;
+
+      // Center of the visible canvas, in flow coordinates.
+      const pane = document.querySelector(".react-flow")?.getBoundingClientRect();
+      const center = pane
+        ? screenToFlowPosition({
+            x: pane.left + pane.width / 2,
+            y: pane.top + pane.height / 2,
+          })
+        : { x: 0, y: 0 };
+
+      // Slight scatter so stacked spawns stay visible.
+      const jitter = (seq % 5) * 18;
+      seq += 1;
+
+      const id = `node-${seq}-${Date.now()}`;
+      setNodes((nds) =>
+        nds
+          .map((n) => ({ ...n, selected: false }))
+          .concat({
+            id,
+            type: "circuit",
+            position: { x: center.x - 90 + jitter, y: center.y - 24 + jitter },
+            data: { kind, label: spec.label, value: spec.value },
+            selected: true,
+          }),
+      );
+    },
+    [screenToFlowPosition, setNodes],
+  );
+
   return (
     <div className="flex h-dvh flex-col bg-background">
       <header className="flex shrink-0 items-center gap-4 border-b border-border bg-panel px-4 py-2.5">
@@ -168,7 +170,7 @@ function BoardShell({
         <div className="ml-auto flex items-center gap-2">
           <span className="hidden items-center gap-1.5 font-mono text-[11px] text-muted-foreground md:flex">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-trace" />
-            idle · sim off
+            {nodes.length} parts · sim off
           </span>
           <button
             type="button"
@@ -182,14 +184,20 @@ function BoardShell({
       <div className="flex min-h-0 flex-1">
         {paletteOpen && (
           <div className="hidden w-60 shrink-0 border-r border-border md:block">
-            <Palette onAdd={() => undefined} />
+            <Palette onAdd={addComponent} />
           </div>
         )}
 
         <div className="min-w-0 flex-1">
           <ResizablePanelGroup orientation="vertical" className="flex-col">
             <ResizablePanel defaultSize="65%" minSize="25%">
-              <Canvas />
+              <Canvas
+                nodes={nodes}
+                edges={edges}
+                onNodesChange={onNodesChange}
+                onEdgesChange={onEdgesChange}
+                onConnect={onConnect}
+              />
             </ResizablePanel>
             <ResizableHandle
               withHandle
@@ -202,10 +210,8 @@ function BoardShell({
         </div>
       </div>
 
-      <div className="border-t border-border bg-panel p-2 md:hidden">
-        <div className="flex gap-2 overflow-x-auto">
-          <Palette onAdd={() => undefined} />
-        </div>
+      <div className="border-t border-border bg-panel md:hidden">
+        <Palette onAdd={addComponent} />
       </div>
     </div>
   );
