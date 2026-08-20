@@ -12,6 +12,7 @@ import {
   type Connection,
   type Edge,
   type Node,
+  type NodeMouseHandler,
   type OnConnect,
   type OnEdgesChange,
   type OnNodesChange,
@@ -66,12 +67,14 @@ function Canvas({
   onNodesChange,
   onEdgesChange,
   onConnect,
+  onNodeContextMenu,
 }: {
   nodes: Node[];
   edges: Edge[];
   onNodesChange: OnNodesChange;
   onEdgesChange: OnEdgesChange;
   onConnect: OnConnect;
+  onNodeContextMenu: NodeMouseHandler;
 }) {
   return (
     <div className="relative h-full w-full">
@@ -82,6 +85,7 @@ function Canvas({
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
+        onNodeContextMenu={onNodeContextMenu}
         nodesDraggable
         nodesConnectable
         elementsSelectable
@@ -115,6 +119,15 @@ function BoardShell() {
   const onConnect = useCallback(
     (params: Connection) => setEdges((eds) => addEdge({ ...params, animated: true }, eds)),
     [setEdges],
+  );
+
+  const onNodeContextMenu = useCallback<NodeMouseHandler>(
+    (event, node) => {
+      event.preventDefault();
+      setNodes((nds) => nds.filter((n) => n.id !== node.id));
+      setEdges((eds) => eds.filter((e) => e.source !== node.id && e.target !== node.id));
+    },
+    [setNodes, setEdges],
   );
 
   const addComponent = useCallback(
@@ -197,6 +210,7 @@ function BoardShell() {
                 onNodesChange={onNodesChange}
                 onEdgesChange={onEdgesChange}
                 onConnect={onConnect}
+                onNodeContextMenu={onNodeContextMenu}
               />
             </ResizablePanel>
             <ResizableHandle
